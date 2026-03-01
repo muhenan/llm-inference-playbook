@@ -179,3 +179,62 @@ vllm bench serve \
 **5. 多次压测取平均**
 
 单次结果受随机性影响，建议同一配置跑 3 次取平均值。
+
+---
+
+## 核心原理与关键参数
+
+### 核心原理
+
+#### PagedAttention
+vLLM 的核心发明。传统推理框架会为每个请求预分配一块连续的显存来存 KV Cache，导致大量显存碎片浪费。PagedAttention 借鉴操作系统虚拟内存的思路，把 KV Cache 切成固定大小的 page 动态分配，显存利用率大幅提升，支持更多并发请求。
+
+#### Prefill 与 Decode 分离
+一次推理分两个阶段：
+
+- **Prefill**：处理用户输入，一次性计算所有 input token 的 KV Cache，计算密集，决定 TTFT
+- **Decode**：逐个生成 output token，每次只算一个 token，内存带宽密集，决定 TPOT
+
+两个阶段计算特征完全不同，是理解延迟指标和性能瓶颈的基础。大规模部署时可以将两个阶段拆到不同机器上分别优化。
+
+#### Continuous Batching
+传统 batching 要等一批请求全部完成才处理下一批，GPU 利用率低。Continuous Batching 让新请求随时插入正在进行的 batch，GPU 始终满载，是 vLLM 高吞吐的关键机制。
+
+#### 量化（Quantization）
+将模型权重从 FP16 压缩到更低精度（INT8、INT4、FP8），显存占用减半，推理速度提升，精度略有损失。常见方案：
+
+- **FP8**：精度损失最小，需要较新的 GPU（A100/H100）
+- **AWQ / GPTQ**：INT4 量化，显存减少 75%，适合在小卡上跑大模型
+
+---
+
+### 关键启动参数
+
+```bash
+vllm serve <model> \
+  --max-model-len 8192 \
+  --max-num-seqs 256 \
+  --gpu-memory-utilization 0.95 \
+  --tensor-parallel-size 1 \
+  --quantization fp8
+```
+
+| 参数 | 作用 | 调优建议 |
+|---|---|---|
+| `--max-model-len` | 最大上下文长度（input + output） | 按业务需求设置，越小越省显存 |
+| `--max-num-seqs` | 最大并发请求数 | 显存够的情况下尽量调高 |
+| `--gpu-memory-utilization` | 显存使用比例，默认 0.9 | 可调到 0.95 榨干显存，留余量防 OOM |
+| `--tensor-parallel-size` | 多卡张量并行，几张卡写几 | 单卡写 1，多卡按实际数量 |
+| `--quantization` | 量化方式（fp8 / awq / gptq） | 显存不够时开启，优先选 fp8 |
+
+---
+
+### 调参思路
+
+**显存不够跑不起来** → 开启量化（`--quantization fp8`）或缩短 `--max-model-len`
+
+**TTFT 太高** → 减少 `--max-num-seqs`，降低并发，让 prefill 更快完成
+
+**吞吐量不够** → 调高 `--gpu-memory-utilization`，增大 KV Cache，支持更多并发
+
+**多卡部署** → 设置 `--tensor-parallel-size` 等于 GPU 数量
