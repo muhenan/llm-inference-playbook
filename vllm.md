@@ -1,6 +1,8 @@
-# vLLM 部署快速参考
+# vLLM
 
-## 环境信息
+## 部署快速参考
+
+### 环境信息
 
 | 项目 | 值 |
 |---|---|
@@ -12,7 +14,7 @@
 
 ---
 
-## Terminal 1 — 启动 vLLM 服务（在云机器上）
+### Terminal 1 — 启动 vLLM 服务（在云机器上）
 
 ```bash
 # 1. SSH 进入云机器
@@ -32,7 +34,7 @@ INFO: Starting vLLM API server on http://0.0.0.0:30000
 
 ---
 
-## Terminal 2 — 建立端口转发（在本机 Mac 上）
+### Terminal 2 — 建立端口转发（在本机 Mac 上）
 
 ```bash
 # 把本机 30000 端口转发到云机器的 30000 端口
@@ -50,7 +52,7 @@ ssh root@194.68.245.129 -p 22025 -i ~/.ssh/id_rsa -L 30000:localhost:30000 -N
 
 ---
 
-## Terminal 3 — 测试调用（在本机 Mac 上）
+### Terminal 3 — 测试调用（在本机 Mac 上）
 
 ```bash
 curl http://localhost:30000/v1/chat/completions \
@@ -65,13 +67,13 @@ curl http://localhost:30000/v1/chat/completions \
 
 ---
 
-## 用完记得关机
+### 用完记得关机
 
 在 RunPod 控制台点 **Stop** 停止 Pod，否则持续计费。
 
 ---
 
-## vLLM 压力测试
+## 压力测试
 
 ### 压测命令
 
