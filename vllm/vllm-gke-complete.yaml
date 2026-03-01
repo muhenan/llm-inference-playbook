@@ -1,0 +1,124 @@
+# kubectl apply -f vllm-gke-complete.yaml
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-infra
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hf-secret
+  namespace: ai-infra
+type: Opaque
+stringData:
+  HF_TOKEN: "your-hf-token-here"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: model-cache-pvc
+  namespace: ai-infra
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: standard-rwo  # GKE 默认 StorageClass
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-qwen
+  namespace: ai-infra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-qwen
+  template:
+    metadata:
+      labels:
+        app: vllm-qwen
+    spec:
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:latest
+          command:
+            - python
+            - -m
+            - vllm.entrypoints.openai.api_server
+          args:
+            - --model
+            - Qwen/Qwen2.5-1.5B-Instruct
+            - --port
+            - "8000"
+            - --host
+            - "0.0.0.0"
+            - --gpu-memory-utilization
+            - "0.90"
+            - --max-model-len
+            - "8192"
+            - --max-num-seqs
+            - "256"
+          ports:
+            - containerPort: 8000
+          env:
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-secret
+                  key: HF_TOKEN
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+              memory: "40Gi"
+              cpu: "8"
+            requests:
+              nvidia.com/gpu: 1
+              memory: "40Gi"
+              cpu: "4"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 120
+            periodSeconds: 30
+          volumeMounts:
+            - name: model-cache
+              mountPath: /root/.cache/huggingface
+      volumes:
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: model-cache-pvc
+      nodeSelector:
+        cloud.google.com/gke-accelerator: nvidia-tesla-a100
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-qwen-svc
+  namespace: ai-infra
+spec:
+  selector:
+    app: vllm-qwen
+  ports:
+    - port: 80
+      targetPort: 8000
+  type: ClusterIP
