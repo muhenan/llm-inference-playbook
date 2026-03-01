@@ -6,9 +6,7 @@ MODEL = "Qwen/Qwen2.5-1.5B-Instruct"
 
 def chat(message, history):
     messages = [{"role": "system", "content": "你是一个helpful的AI助手。"}]
-    for human, assistant in history:
-        messages.append({"role": "user", "content": human})
-        messages.append({"role": "assistant", "content": assistant})
+    messages.extend(history)
     messages.append({"role": "user", "content": message})
 
     response = client.chat.completions.create(model=MODEL, messages=messages)
