@@ -7,6 +7,7 @@
 | 教程 | 说明 |
 |---|---|
 | [vLLM](./vllm/vllm.md) | 部署、调用与压力测试 |
+| [推理参数](./notes/inference.md) | Maximum New Tokens、Temperature、Top-p 详解 |
 
 ## 涉及技术
 
