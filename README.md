@@ -8,6 +8,7 @@
 |---|---|
 | [vLLM](./vllm/vllm.md) | 部署、调用与压力测试 |
 | [模型推理](./notes/inference.md) | 模型推理详解 |
+| [Chat Template](./notes/chat-template.md) | 对话模板原理及 Llama / Qwen 示例 |
 
 ## 涉及技术
 
