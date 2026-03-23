@@ -1,10 +1,12 @@
-# 推理参数笔记
+# 模型推理
+
+
+## 推理参数
+
 
 LLM 推理时常见的几个核心参数，理解它们有助于在质量、多样性和速度之间做出正确权衡。
 
----
-
-## Maximum New Tokens
+### Maximum New Tokens
 
 **控制模型最多生成多少个 token。**
 
@@ -23,7 +25,7 @@ LLM 推理时常见的几个核心参数，理解它们有助于在质量、多�
 
 ---
 
-## Temperature
+### Temperature
 
 **控制输出的随机性，本质是对 logits 做缩放。**
 
@@ -45,7 +47,7 @@ probs = softmax(scaled_logits)
 
 ---
 
-## Top-p (Nucleus Sampling)
+### Top-p (Nucleus Sampling)
 
 **在累积概率达到 p 的最小 token 集合中采样。**
 
@@ -66,7 +68,7 @@ probs = softmax(scaled_logits)
 
 ---
 
-## Top-k
+### Top-k
 
 **只从概率最高的 k 个 token 中采样。**
 
