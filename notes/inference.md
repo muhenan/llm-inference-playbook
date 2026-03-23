@@ -95,6 +95,61 @@ probs = softmax(scaled_logits)
 
 ---
 
+## 推理引擎
+
+常见的 LLM 推理引擎各有侧重，选型时主要看场景是本地体验、研究实验还是生产服务。
+
+### Ollama
+
+面向本地部署的一键式推理工具，封装了模型下载、量化和服务启动。
+
+- 安装极简，`ollama run llama3` 即可跑起来
+- 自带模型仓库，支持 GGUF 格式量化模型，CPU 也能跑
+- 提供 OpenAI 兼容 API，方便接入现有工具链
+- **局限：** 性能优化有限，不适合高并发生产场景
+
+### HuggingFace Transformers
+
+学术界和研究领域的事实标准，模型生态最全。
+
+- 支持几乎所有主流模型架构，模型切换成本极低
+- 与训练、微调（PEFT、SFT）流程无缝衔接
+- 文档完善，社区活跃
+- **局限：** 原生推理性能一般，吞吐量不高，需要配合 `accelerate` 等库才能发挥多卡潜力
+
+### vLLM
+
+专为生产级高吞吐推理设计，核心创新是 PagedAttention。
+
+- PagedAttention 大幅提升 KV Cache 利用率，吞吐量远超原生 Transformers
+- 支持连续批处理（Continuous Batching），并发请求下延迟稳定
+- OpenAI 兼容 API，部署即可替换 OpenAI 接口
+- **局限：** 启动较重，本地轻量使用略显繁琐；对非主流模型架构支持滞后
+
+### SGLang
+
+专注于复杂推理场景（多轮对话、Agent、结构化输出）的高性能推理框架。
+
+- RadixAttention 机制让共享前缀的请求复用 KV Cache，多轮场景下效率显著更高
+- 原生支持结构化输出（JSON Schema）和推理时计算（chain-of-thought）
+- 吞吐量与 vLLM 相当，部分场景（长上下文、多轮）更优
+- **局限：** 生态相对年轻，模型兼容性和社区资源不及 vLLM
+
+---
+
+### 横向对比
+
+| | Ollama | HuggingFace | vLLM | SGLang |
+|---|---|---|---|---|
+| 上手难度 | 极低 | 低 | 中 | 中 |
+| 推理吞吐 | 低 | 低～中 | 高 | 高 |
+| 生产可用性 | 否 | 有限 | 是 | 是 |
+| 多轮 / Agent 优化 | 否 | 否 | 一般 | 强 |
+| 模型生态 | 中（GGUF） | 最全 | 主流模型 | 主流模型 |
+| 适用场景 | 本地体验 | 研究 / 微调 | 生产 API 服务 | 复杂推理 / Agent |
+
+---
+
 ## 参数组合速查
 
 | 场景 | Temperature | Top-p | Top-k | Max New Tokens |
